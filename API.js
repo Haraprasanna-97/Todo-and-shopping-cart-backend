@@ -11,16 +11,32 @@ let client = new MongoClient(uri);
 async function connectAndStore(data, dbName, collectionName) {
     try {
         await client.connect()
-    } catch (error) {
-        console.log("Connection failed.")
-    }
+        let database = client.db(dbName);
+        let collection = database.collection(collectionName);
 
-    let database = client.db(dbName);
-    let collection = database.collection(collectionName);
+        let findQuery = { listName: data.listName }
+        let updateQuery = { $set: data }
+        let option = { upsert: true }
 
-    try {
-        const insertResult = await collection.insertOne(data);
-        return insertResult.acknowledged;
+        let updateResult = await collection.updateOne(findQuery, updateQuery);
+        console.log(updateResult)
+        if(updateResult.modifiedCount !== 1){
+            let insertResult = await collection.insertOne(data);
+            return insertResult.acknowledged;
+        }
+        return updateResult.acknowledged;
+
+        // let document = await collection.findOne(findQuery)
+        // if (document) {
+        //     console.log(document)
+        //     // update
+        //     let updateResult = await collection.updateOne(findQuery, updateQuery, option);
+        //     return updateResult.acknowledged;
+        // }
+        // else {
+        //     let insertResult = await collection.insertOne(data);
+        //     return insertResult.acknowledged;
+        // }
     }
     catch (error) {
         console.log("Insert failed.")
@@ -54,6 +70,26 @@ async function connectAndCheckAvaility(data, dbName, collectionName) {
     // }
 }
 
+async function connectAndCheckAvaility(data, dbName, collectionName) {
+    try {
+        await client.connect()
+    } catch (error) {
+        console.log("Connection failed.")
+    }
+
+    let database = client.db(dbName);
+    let collection = database.collection(collectionName);
+    let query = { listName: data.listName }
+
+    try {
+        let document = collection.findOne(query)
+        return document
+    }
+    catch (error) {
+        return false
+    }
+}
+
 app.use(cors())
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
@@ -68,17 +104,25 @@ app.post('/feedback', async function (req, res) {
 })
 
 app.post("/saveList", async function (req, res) {
-    let response = await connectAndCheckAvaility(req.body, "TodoAndShopingCart", "Lists")
+    // let response = await connectAndCheckAvaility(req.body, "TodoAndShopingCart", "Lists")
+    // if (response) {
+    //     res.send({Message:"saved",success:"true"})
+    // } else {
+    //     // res.send("F")
+    //     let response = await connectAndStore(req.body, "TodoAndShopingCart", "Lists")
+    //     if (response) {
+    //         res.send({Message:"saved",success:"true"})
+    //     } else {
+    //         res.send({Message:"Sorry, something went wrong", success:false})
+    //     }
+    // }
+
+    let response = await connectAndStore(req.body, "TodoAndShopingCart", "Lists")
     if (response) {
-        res.send("saved")
+        console.log(response)
+        res.send({ Message: "saved", success: true })
     } else {
-        // res.send("F")
-        let response = await connectAndStore(req.body, "TodoAndShopingCart", "Lists")
-        if (response) {
-            res.send("Saved")
-        } else {
-            res.send("Sorry, something went wrong")
-        }
+        res.send({ Message: "Sorry, something went wrong", success: false })
     }
 })
 
