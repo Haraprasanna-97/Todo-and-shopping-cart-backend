@@ -2,10 +2,11 @@ const express = require('express')
 var cors = require('cors')
 const app = express()
 var bodyParser = require('body-parser')
+require('dotenv').config();
 
 const { MongoClient } = require('mongodb');
 
-let uri = "mongodb+srv://Hara:KzOTXqnB8fkE7B3W@cluster0.agnnqi2.mongodb.net/";
+let uri = process.env.URI;
 let client = new MongoClient(uri);
 
 async function connectAndStore(data, dbName, collectionName) {
@@ -42,9 +43,9 @@ async function connectAndStore(data, dbName, collectionName) {
         console.log("Insert failed.")
         return false
     }
-    finally {
-        await client.close();
-    }
+    // finally {
+    //     await client.close();
+    // }
 }
 
 async function connectAndCheckAvaility(data, dbName, collectionName) {
@@ -124,6 +125,21 @@ app.post("/saveList", async function (req, res) {
     } else {
         res.send({ Message: "Sorry, something went wrong", success: false })
     }
+})
+
+app.get("/getList", async (req,res) => {
+    database = client.db("TodoAndShopingCart")
+    collection = database.collection("Lists")
+    query = {ListID : 1}
+
+    try {
+        let document = await collection.findOne(query)
+        res.send({ data : document, success : true}) 
+    }
+    catch (error) {
+        res.send({ Message: "Sorry, something went wrong", success: false })
+    }
+    
 })
 
 app.listen(3001)
